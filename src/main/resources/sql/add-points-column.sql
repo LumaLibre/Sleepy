@@ -1,0 +1,2 @@
+ALTER TABLE player_playtime
+ADD COLUMN points INTEGER NOT NULL DEFAULT 0;

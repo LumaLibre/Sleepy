@@ -1,0 +1,144 @@
+package dev.lumas.sleepy.model
+
+import java.util.UUID
+
+class PlayerActivity(stored: PlaytimeEntry) {
+    val uuid: UUID = stored.uuid
+
+    @Volatile
+    var name: String = stored.name
+
+    @Volatile
+    var playtimeSeconds: Long = stored.playtimeSeconds
+        private set
+
+    @Volatile
+    var totalAfkSeconds: Long = stored.afkSeconds
+        private set
+
+    @Volatile
+    var points: Long = stored.points
+        private set
+
+    @Volatile
+    var currentAfkSeconds: Long = 0
+        private set
+
+    @Volatile
+    var cause: AfkCause = AfkCause.NONE
+        private set
+
+    @Volatile
+    var teleportPending: Boolean = false
+
+    @Volatile
+    private var lastActivityNanos: Long = System.nanoTime()
+
+    @Volatile
+    private var manual: Boolean = false
+
+    @Volatile
+    private var wasInRegion: Boolean = false
+
+    private val executedPreTeleportActions = mutableSetOf<Long>()
+
+    val isAfk: Boolean
+        get() = cause != AfkCause.NONE
+
+    @Synchronized
+    fun tick(inRegion: Boolean, exempt: Boolean, markAfterSeconds: Long): TickResult {
+        val previous = cause
+        val previousAfkSeconds = currentAfkSeconds
+        val previouslyInRegion = wasInRegion
+        wasInRegion = inRegion
+        playtimeSeconds++
+
+        when {
+            exempt -> {
+                manual = false
+                currentAfkSeconds = 0
+                lastActivityNanos = System.nanoTime()
+                cause = AfkCause.NONE
+                executedPreTeleportActions.clear()
+            }
+
+            manual -> {
+                currentAfkSeconds++
+                cause = AfkCause.MANUAL
+            }
+
+            else -> {
+                currentAfkSeconds = maxOf(0, (System.nanoTime() - lastActivityNanos) / 1_000_000_000L)
+                cause = if (currentAfkSeconds >= markAfterSeconds) AfkCause.INACTIVITY else AfkCause.NONE
+            }
+        }
+
+        if (cause != AfkCause.NONE) totalAfkSeconds++
+        return TickResult(
+            previousCause = previous,
+            cause = cause,
+            previousAfkSeconds = previousAfkSeconds,
+            afkSeconds = currentAfkSeconds,
+            wasInRegion = previouslyInRegion,
+            inRegion = inRegion,
+        )
+    }
+
+    @Synchronized
+    fun recordActivity(): Boolean {
+        if (teleportPending) return false
+        val returned = cause != AfkCause.NONE || manual
+        manual = false
+        currentAfkSeconds = 0
+        cause = AfkCause.NONE
+        lastActivityNanos = System.nanoTime()
+        executedPreTeleportActions.clear()
+        return returned
+    }
+
+    @Synchronized
+    fun toggleManual(): Boolean {
+        if (manual) {
+            recordActivity()
+            return false
+        }
+        manual = true
+        currentAfkSeconds = maxOf(1, currentAfkSeconds)
+        cause = AfkCause.MANUAL
+        return true
+    }
+
+    @Synchronized
+    fun addPoints(amount: Long): Long {
+        require(amount > 0) { "Point amount must be positive" }
+        points = if (Long.MAX_VALUE - points < amount) Long.MAX_VALUE else points + amount
+        return points
+    }
+
+    @Synchronized
+    fun withdrawPoints(amount: Long): Boolean {
+        require(amount > 0) { "Point amount must be positive" }
+        if (points < amount) return false
+        points -= amount
+        return true
+    }
+
+    fun snapshot(): PlaytimeEntry = PlaytimeEntry(uuid, name, playtimeSeconds, totalAfkSeconds, points)
+
+    @Synchronized
+    fun claimPreTeleportActions(beforeSeconds: Long): Boolean =
+        executedPreTeleportActions.add(beforeSeconds)
+
+    data class TickResult(
+        val previousCause: AfkCause,
+        val cause: AfkCause,
+        val previousAfkSeconds: Long,
+        val afkSeconds: Long,
+        val wasInRegion: Boolean,
+        val inRegion: Boolean,
+    ) {
+        val becameAfk: Boolean get() = previousCause == AfkCause.NONE && cause != AfkCause.NONE
+        val enteredRegion: Boolean get() = !wasInRegion && inRegion
+        val returned: Boolean get() = previousCause != AfkCause.NONE && cause == AfkCause.NONE
+    }
+}
