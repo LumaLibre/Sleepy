@@ -45,7 +45,7 @@ class SleepyConfig {
 
     @field:Setting("point-rewards")
     @field:Comment("Persistent points awarded at configurable total-online-playtime intervals.")
-    var pointRewards: MutableList<PointReward> = mutableListOf()
+    var pointRewards: MutableList<PointReward> = mutableListOf(PointReward())
 
     @field:Setting
     var storage: Storage = Storage()
@@ -61,7 +61,7 @@ class SleepyConfig {
 
         @field:Setting("camera-tolerance-degrees")
         @field:Comment("Ignore camera jitter smaller than this many degrees.")
-        var cameraToleranceDegrees: Double = 0.01
+        var cameraToleranceDegrees: Double = 0.02
     }
 
     @ConfigSerializable
