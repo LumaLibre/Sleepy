@@ -3,6 +3,7 @@ package dev.lumas.sleepy.service
 import dev.lumas.core.util.PluginContextLogger
 import dev.lumas.sleepy.Sleepy
 import dev.lumas.sleepy.config.SleepyConfig
+import dev.lumas.sleepy.model.AfkRegion
 import dev.lumas.sleepy.model.PlayerActivity
 import dev.lumas.sleepy.util.Messages
 import org.bukkit.Bukkit
@@ -27,9 +28,27 @@ class RegionService {
 
         val (selected, world) = available[ThreadLocalRandom.current().nextInt(available.size)]
         val spawn = selected.selectSpawn()
-        val schedulingLocation = spawn.position.toLocation(world)
         activity.teleportPending = true
 
+        val vehicle = player.vehicle
+        if (vehicle != null) {
+            if (!player.leaveVehicle()) {
+                vehicle.removePassenger(player)
+            }
+            player.scheduler.execute(
+                Sleepy.instance,
+                { executeTeleport(player, activity, selected, world, spawn) },
+                { activity.teleportPending = false },
+                1L
+            )
+            return
+        }
+
+        executeTeleport(player, activity, selected, world, spawn)
+    }
+
+    private fun executeTeleport(player: Player, activity: PlayerActivity, selected: AfkRegion, world: World, spawn: AfkRegion.Spawn) {
+        val schedulingLocation = spawn.position.toLocation(world)
         Bukkit.getRegionScheduler().execute(Sleepy.instance, schedulingLocation) {
             val destination = selected.resolveSpawn(world, spawn)
             if (destination == null) {
