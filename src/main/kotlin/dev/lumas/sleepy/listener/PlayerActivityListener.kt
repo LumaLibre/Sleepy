@@ -28,7 +28,7 @@ class PlayerActivityListener : Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onInput(event: PlayerInputEvent) {
-        Sleepy.activity.recordActivity(event.player)
+        Sleepy.activity.recordMovementInput(event.player, event.input)
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -41,6 +41,7 @@ class PlayerActivityListener : Listener {
         if (cameraMoved) {
             Sleepy.activity.recordActivity(event.player)
         }
+        Sleepy.activity.recordMovement(event.player, to)
     }
 
     private fun angularDistance(first: Float, second: Float): Double =

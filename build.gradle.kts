@@ -2,7 +2,7 @@ import net.minecrell.pluginyml.bukkit.BukkitPluginDescription
 
 plugins {
     kotlin("jvm") version "2.4.0"
-    id("com.gradleup.shadow") version "8.3.5"
+    //id("com.gradleup.shadow") version "8.3.5"
     id("de.eldoria.plugin-yml.bukkit") version "0.9.0"
     id("xyz.jpenilla.run-paper") version "3.0.1"
 }
@@ -44,15 +44,15 @@ tasks {
     test {
         useJUnitPlatform()
     }
-    build {
-        dependsOn(shadowJar)
-    }
-    shadowJar {
-        archiveClassifier.set("")
-    }
-    jar {
-        enabled = false
-    }
+//    build {
+//        dependsOn(shadowJar)
+//    }
+//    shadowJar {
+//        archiveClassifier.set("")
+//    }
+//    jar {
+//        enabled = false
+//    }
 }
 
 bukkit {

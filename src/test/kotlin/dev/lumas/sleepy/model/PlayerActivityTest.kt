@@ -42,6 +42,40 @@ class PlayerActivityTest {
     }
 
     @Test
+    fun `keyboard input only clears afk after enough real movement`() {
+        val activity = PlayerActivity(PlaytimeEntry(UUID.randomUUID(), "Luma", 0, 0))
+        val world = UUID.randomUUID()
+        assertTrue(activity.toggleManual())
+
+        assertFalse(activity.recordMovement(world, 1.0, 64.0, 0.0, 0.15))
+        assertTrue(activity.isAfk)
+
+        activity.updateMovementInput(true, world, 0.0, 64.0, 0.0)
+        assertFalse(activity.recordMovement(world, 0.1, 64.0, 0.0, 0.15))
+        assertTrue(activity.isAfk)
+
+        assertTrue(activity.recordMovement(world, 0.2, 64.0, 0.0, 0.15))
+        assertFalse(activity.isAfk)
+    }
+
+    @Test
+    fun `released input and world changes do not clear afk`() {
+        val activity = PlayerActivity(PlaytimeEntry(UUID.randomUUID(), "Luma", 0, 0))
+        val firstWorld = UUID.randomUUID()
+        val secondWorld = UUID.randomUUID()
+        assertTrue(activity.toggleManual())
+
+        activity.updateMovementInput(true, firstWorld, 0.0, 64.0, 0.0)
+        activity.updateMovementInput(false, firstWorld, 0.0, 64.0, 0.0)
+        assertFalse(activity.recordMovement(firstWorld, 1.0, 64.0, 0.0, 0.15))
+        assertTrue(activity.isAfk)
+
+        activity.updateMovementInput(true, firstWorld, 0.0, 64.0, 0.0)
+        assertFalse(activity.recordMovement(secondWorld, 100.0, 64.0, 100.0, 0.15))
+        assertTrue(activity.isAfk)
+    }
+
+    @Test
     fun `points are awarded and included in snapshots`() {
         val activity = PlayerActivity(PlaytimeEntry(UUID.randomUUID(), "Luma", 0, 0, 4))
 

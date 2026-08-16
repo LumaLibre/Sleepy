@@ -15,6 +15,8 @@ import dev.lumas.sleepy.util.ActionText
 import dev.lumas.sleepy.util.PlayerNames
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask
 import org.bukkit.Bukkit
+import org.bukkit.Input
+import org.bukkit.Location
 import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -86,7 +88,35 @@ class ActivityService(
 
     fun recordActivity(player: Player) {
         val activity = activities[player.uniqueId] ?: return
-        if (activity.recordActivity()) {
+        sendReturnMessage(player, activity.recordActivity())
+    }
+
+    fun recordMovementInput(player: Player, input: Input) {
+        val activity = activities[player.uniqueId] ?: return
+        val location = player.location
+        activity.updateMovementInput(
+            input.hasMovementInput,
+            location.world.uid,
+            location.x,
+            location.y,
+            location.z,
+        )
+    }
+
+    fun recordMovement(player: Player, location: Location) {
+        val activity = activities[player.uniqueId] ?: return
+        val returned = activity.recordMovement(
+            location.world.uid,
+            location.x,
+            location.y,
+            location.z,
+            SleepyConfig.instance.detection.movementDistance,
+        )
+        sendReturnMessage(player, returned)
+    }
+
+    private fun sendReturnMessage(player: Player, returned: Boolean) {
+        if (returned) {
             Messages.send(player, "sleepy.message.afk.return")
         }
     }
@@ -257,6 +287,9 @@ class ActivityService(
 
     private fun pointLock(uuid: UUID): Any =
         pointPersistenceLocks.computeIfAbsent(uuid) { Any() }
+
+    private val Input.hasMovementInput: Boolean
+        get() = isForward || isBackward || isLeft || isRight || isJump || isSneak || isSprint
 
     companion object {
         private val LOGGER = PluginContextLogger.getPluginLogger()

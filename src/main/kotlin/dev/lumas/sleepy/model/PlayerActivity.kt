@@ -40,6 +40,9 @@ class PlayerActivity(stored: PlaytimeEntry) {
     @Volatile
     private var wasInRegion: Boolean = false
 
+    private var movementInputActive: Boolean = false
+    private var movementAnchor: MovementAnchor? = null
+
     private val executedPreTeleportActions = mutableSetOf<Long>()
 
     val isAfk: Boolean
@@ -97,6 +100,37 @@ class PlayerActivity(stored: PlaytimeEntry) {
     }
 
     @Synchronized
+    fun updateMovementInput(active: Boolean, world: UUID, x: Double, y: Double, z: Double) {
+        movementInputActive = active
+        when {
+            !active -> movementAnchor = null
+            movementAnchor?.world != world -> movementAnchor = MovementAnchor(world, x, y, z)
+        }
+    }
+
+    @Synchronized
+    fun recordMovement(
+        world: UUID,
+        x: Double,
+        y: Double,
+        z: Double,
+        minimumDistance: Double,
+    ): Boolean {
+        if (!movementInputActive) return false
+
+        val current = MovementAnchor(world, x, y, z)
+        val previous = movementAnchor
+        if (previous == null || previous.world != world) {
+            movementAnchor = current
+            return false
+        }
+        if (previous.distanceSquared(current) < minimumDistance * minimumDistance) return false
+
+        movementAnchor = current
+        return recordActivity()
+    }
+
+    @Synchronized
     fun toggleManual(): Boolean {
         if (manual) {
             recordActivity()
@@ -140,5 +174,19 @@ class PlayerActivity(stored: PlaytimeEntry) {
         val becameAfk: Boolean get() = previousCause == AfkCause.NONE && cause != AfkCause.NONE
         val enteredRegion: Boolean get() = !wasInRegion && inRegion
         val returned: Boolean get() = previousCause != AfkCause.NONE && cause == AfkCause.NONE
+    }
+
+    private data class MovementAnchor(
+        val world: UUID,
+        val x: Double,
+        val y: Double,
+        val z: Double,
+    ) {
+        fun distanceSquared(other: MovementAnchor): Double {
+            val xDifference = other.x - x
+            val yDifference = other.y - y
+            val zDifference = other.z - z
+            return xDifference * xDifference + yDifference * yDifference + zDifference * zDifference
+        }
     }
 }

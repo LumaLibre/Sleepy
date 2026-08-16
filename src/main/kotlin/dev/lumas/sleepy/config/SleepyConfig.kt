@@ -56,12 +56,18 @@ class SleepyConfig {
     @ConfigSerializable
     class Detection {
         @field:Setting("mark-after-seconds")
-        @field:Comment("Seconds without camera, position, or PlayerInputEvent activity before AFK is set.")
+        @field:Comment("Seconds without camera or keyboard-backed movement activity before AFK is set.")
         var markAfterSeconds: Long = 420
 
         @field:Setting("camera-tolerance-degrees")
         @field:Comment("Ignore camera jitter smaller than this many degrees.")
         var cameraToleranceDegrees: Double = 0.02
+
+        @field:Setting("movement-distance")
+        @field:Comment(
+            "Blocks a player must travel while holding a movement input before that movement counts as activity.",
+        )
+        var movementDistance: Double = 0.4
     }
 
     @ConfigSerializable
@@ -116,6 +122,9 @@ class SleepyConfig {
 
     private fun validate() {
         require(detection.markAfterSeconds > 0) { "detection.mark-after-seconds must be positive" }
+        require(detection.movementDistance.isFinite() && detection.movementDistance > 0) {
+            "detection.movement-distance must be finite and positive"
+        }
         require(teleport.afterSeconds >= detection.markAfterSeconds) {
             "teleport.after-seconds cannot be lower than detection.mark-after-seconds"
         }
