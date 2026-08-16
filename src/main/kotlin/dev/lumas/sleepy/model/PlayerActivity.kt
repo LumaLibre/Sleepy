@@ -1,6 +1,8 @@
 package dev.lumas.sleepy.model
 
 import java.util.UUID
+import kotlin.math.IEEErem
+import kotlin.math.abs
 
 class PlayerActivity(stored: PlaytimeEntry) {
     val uuid: UUID = stored.uuid
@@ -42,6 +44,7 @@ class PlayerActivity(stored: PlaytimeEntry) {
 
     private var movementInputActive: Boolean = false
     private var movementAnchor: MovementAnchor? = null
+    private var cameraAnchor: CameraAnchor? = null
 
     private val executedPreTeleportActions = mutableSetOf<Long>()
 
@@ -131,6 +134,28 @@ class PlayerActivity(stored: PlaytimeEntry) {
     }
 
     @Synchronized
+    fun resetCamera(yaw: Float, pitch: Float) {
+        cameraAnchor = CameraAnchor(yaw, pitch)
+    }
+
+    @Synchronized
+    fun recordCamera(yaw: Float, pitch: Float, toleranceDegrees: Double): Boolean {
+        val current = CameraAnchor(yaw, pitch)
+        val previous = cameraAnchor
+        if (previous == null) {
+            cameraAnchor = current
+            return false
+        }
+
+        val moved = angularDistance(previous.yaw, current.yaw) >= toleranceDegrees ||
+            abs(previous.pitch - current.pitch) >= toleranceDegrees
+        if (!moved) return false
+
+        cameraAnchor = current
+        return recordActivity()
+    }
+
+    @Synchronized
     fun toggleManual(): Boolean {
         if (manual) {
             recordActivity()
@@ -189,4 +214,12 @@ class PlayerActivity(stored: PlaytimeEntry) {
             return xDifference * xDifference + yDifference * yDifference + zDifference * zDifference
         }
     }
+
+    private data class CameraAnchor(
+        val yaw: Float,
+        val pitch: Float,
+    )
+
+    private fun angularDistance(first: Float, second: Float): Double =
+        abs((second - first).toDouble().IEEErem(360.0))
 }

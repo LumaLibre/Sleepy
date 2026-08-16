@@ -58,6 +58,9 @@ class RegionService {
             }
 
             player.teleportAsync(destination).whenComplete { success, error ->
+                if (success == true) {
+                    activity.resetCamera(destination.yaw, destination.pitch)
+                }
                 activity.teleportPending = false
                 when {
                     error != null -> LOGGER.warning(

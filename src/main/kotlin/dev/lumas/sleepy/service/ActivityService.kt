@@ -55,7 +55,16 @@ class ActivityService(
                 {
                     if (!player.isOnline) return@run
                     val activity = PlayerActivity(loaded)
+                    val location = player.location
+                    activity.resetCamera(location.yaw, location.pitch)
                     activities[uuid] = activity
+                    player.scheduler.runAtFixedRate(
+                        Sleepy.instance,
+                        { task -> sampleCamera(player, activity, task) },
+                        null,
+                        1L,
+                        1L,
+                    )
                     player.scheduler.runAtFixedRate(
                         Sleepy.instance,
                         { task -> tick(player, activity, task) },
@@ -153,6 +162,21 @@ class ActivityService(
                 LOGGER.warning("Unable to refresh playtime and AFK-time leaderboards: ${exception.message}", exception)
             }
         }
+    }
+
+    private fun sampleCamera(player: Player, activity: PlayerActivity, task: ScheduledTask) {
+        if (!player.isOnline || activities[player.uniqueId] !== activity) {
+            task.cancel()
+            return
+        }
+
+        val location = player.location
+        val returned = activity.recordCamera(
+            location.yaw,
+            location.pitch,
+            SleepyConfig.instance.detection.cameraToleranceDegrees,
+        )
+        sendReturnMessage(player, returned)
     }
 
     private fun tick(player: Player, activity: PlayerActivity, task: ScheduledTask) {

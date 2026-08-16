@@ -3,7 +3,6 @@ package dev.lumas.sleepy.listener
 import dev.lumas.core.annotation.Autowire
 import dev.lumas.core.annotation.Register
 import dev.lumas.sleepy.Sleepy
-import dev.lumas.sleepy.config.SleepyConfig
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -11,8 +10,6 @@ import org.bukkit.event.player.PlayerInputEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
-import kotlin.math.IEEErem
-import kotlin.math.abs
 
 @Register(Autowire.LISTENER)
 class PlayerActivityListener : Listener {
@@ -33,17 +30,6 @@ class PlayerActivityListener : Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onMove(event: PlayerMoveEvent) {
-        val from = event.from
-        val to = event.to
-        val tolerance = SleepyConfig.instance.detection.cameraToleranceDegrees
-        val cameraMoved = angularDistance(from.yaw, to.yaw) >= tolerance ||
-            abs(from.pitch - to.pitch) >= tolerance
-        if (cameraMoved) {
-            Sleepy.activity.recordActivity(event.player)
-        }
-        Sleepy.activity.recordMovement(event.player, to)
+        Sleepy.activity.recordMovement(event.player, event.to)
     }
-
-    private fun angularDistance(first: Float, second: Float): Double =
-        abs((second - first).toDouble().IEEErem(360.0))
 }
