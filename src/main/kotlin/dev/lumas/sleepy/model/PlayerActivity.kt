@@ -161,6 +161,13 @@ class PlayerActivity(stored: PlaytimeEntry) {
             recordActivity()
             return false
         }
+        markManual()
+        return true
+    }
+
+    @Synchronized
+    fun markManual(): Boolean {
+        if (manual) return false
         manual = true
         currentAfkSeconds = maxOf(1, currentAfkSeconds)
         cause = AfkCause.MANUAL

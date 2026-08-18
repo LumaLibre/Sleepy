@@ -88,6 +88,10 @@ bukkit {
             description = "Toggle your AFK status."
             default = BukkitPluginDescription.Permission.Default.OP
         }
+        register("sleepy.command.afk.warp") {
+            description = "Use /afk warp to be sent to an AFK spot right away."
+            default = BukkitPluginDescription.Permission.Default.TRUE
+        }
         register("sleepy.command.points") {
             description = "Use /sleepy points to view oneira."
             default = BukkitPluginDescription.Permission.Default.TRUE

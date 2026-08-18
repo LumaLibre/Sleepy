@@ -83,7 +83,7 @@ class SleepyConfig {
         var afterSeconds: Long = 600
 
         @field:Setting("on-manual-afk")
-        var onManualAfk: Boolean = true
+        var onManualAfk: Boolean = false
 
         @field:Setting
         @field:Comment(

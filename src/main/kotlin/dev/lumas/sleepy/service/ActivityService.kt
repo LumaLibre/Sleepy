@@ -140,10 +140,25 @@ class ActivityService(
             return false
         }
 
+        if (SleepyConfig.instance.teleport.onManualAfk) {
+            teleportToSpot(player, activity, respectExempt = true)
+        }
+        return true
+    }
+
+    fun warpManual(player: Player): Boolean {
+        val activity = activities[player.uniqueId] ?: return false
+        activity.markManual()
+        return teleportToSpot(player, activity, respectExempt = false)
+    }
+
+    private fun teleportToSpot(player: Player, activity: PlayerActivity, respectExempt: Boolean): Boolean {
         val config = SleepyConfig.instance
-        val teleportNow = config.teleport.enabled && config.teleport.onManualAfk &&
-            !isExempt(player, config) && !regions.contains(player.location) && regions.hasAvailableRegion()
-        if (teleportNow) regions.teleport(player, activity)
+        if (!config.teleport.enabled || !regions.hasAvailableRegion()) return false
+        if (respectExempt && isExempt(player, config)) return false
+        if (regions.contains(player.location)) return true
+
+        regions.teleport(player, activity)
         return true
     }
 
