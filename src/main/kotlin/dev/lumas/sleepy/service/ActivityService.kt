@@ -188,7 +188,9 @@ class ActivityService(
         activity.name = player.name
         val config = SleepyConfig.instance
         val inRegion = regions.contains(player.location)
-        val result = activity.tick(inRegion, isExempt(player, config), config.detection.markAfterSeconds)
+        val exemptFromActions = isExempt(player, config)
+        val exemptFromStatus = exemptFromActions && !keepsAfkStatus(player, config)
+        val result = activity.tick(inRegion, exemptFromStatus, config.detection.markAfterSeconds)
 
         runPointRewards(player, activity, activity.playtimeSeconds, config.pointRewards)
 
@@ -202,7 +204,7 @@ class ActivityService(
             result.returned -> Messages.send(player, "sleepy.message.afk.return")
         }
 
-        if (result.cause != AfkCause.NONE) {
+        if (result.cause != AfkCause.NONE && !exemptFromActions) {
             runActions(player, result.afkSeconds, config.teleport.afterSeconds, config.commandActions)
             val canTeleport = config.teleport.enabled && !inRegion && regions.hasAvailableRegion()
             if (canTeleport) {
@@ -247,7 +249,13 @@ class ActivityService(
     }
 
     private fun isExempt(player: Player, config: SleepyConfig): Boolean =
-        config.exemptWorlds.any { it == player.world.key.asString() || it.equals(player.world.name, ignoreCase = true) } || player.hasPermission(EXEMPT_PERMISSION)
+        isExemptWorld(player, config) || player.hasPermission(EXEMPT_PERMISSION)
+
+    private fun isExemptWorld(player: Player, config: SleepyConfig): Boolean =
+        config.exemptWorlds.any { it == player.world.key.asString() || it.equals(player.world.name, ignoreCase = true) }
+
+    private fun keepsAfkStatus(player: Player, config: SleepyConfig): Boolean =
+        config.exemptKeepsAfkStatus && !isExemptWorld(player, config)
 
     private fun runActions(
         player: Player,

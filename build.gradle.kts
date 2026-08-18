@@ -107,7 +107,7 @@ bukkit {
             default = BukkitPluginDescription.Permission.Default.OP
         }
         register("sleepy.exempt") {
-            description = "Exempts a player from automatic AFK tracking."
+            description = "Exempts a player from AFK teleports and actions, and from AFK tracking unless exempt-keeps-afk-status is enabled."
             default = BukkitPluginDescription.Permission.Default.OP
         }
     }

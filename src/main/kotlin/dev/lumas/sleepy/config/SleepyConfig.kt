@@ -40,6 +40,9 @@ class SleepyConfig {
     @field:Setting("exempt-worlds")
     var exemptWorlds: MutableList<String> = mutableListOf()
 
+    @field:Setting("exempt-keeps-afk-status")
+    var exemptKeepsAfkStatus: Boolean = true
+
     @field:Setting("command-actions")
     var commandActions: MutableList<CommandAction> = mutableListOf()
 
