@@ -82,6 +82,9 @@ class SleepyConfig {
         @field:Comment("Teleport to a random configured region after this many current AFK seconds.")
         var afterSeconds: Long = 600
 
+        @field:Setting("on-manual-afk")
+        var onManualAfk: Boolean = true
+
         @field:Setting
         @field:Comment(
             "AFK bubbles. Entering one is informational and prevents teleporting, but does not force AFK status.",

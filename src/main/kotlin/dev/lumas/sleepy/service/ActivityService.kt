@@ -133,9 +133,18 @@ class ActivityService(
     }
 
     fun toggleManual(player: Player): Boolean {
-        val enabled = activities[player.uniqueId]?.toggleManual() ?: false
-        if (!enabled) regions.release(player)
-        return enabled
+        val activity = activities[player.uniqueId] ?: return false
+        val enabled = activity.toggleManual()
+        if (!enabled) {
+            regions.release(player)
+            return false
+        }
+
+        val config = SleepyConfig.instance
+        val teleportNow = config.teleport.enabled && config.teleport.onManualAfk &&
+            !isExempt(player, config) && !regions.contains(player.location) && regions.hasAvailableRegion()
+        if (teleportNow) regions.teleport(player, activity)
+        return true
     }
 
     fun addPoints(player: Player, amount: Long): Long? {
