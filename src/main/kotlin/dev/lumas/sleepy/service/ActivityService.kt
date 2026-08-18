@@ -141,7 +141,7 @@ class ActivityService(
         }
 
         if (SleepyConfig.instance.teleport.onManualAfk) {
-            teleportToSpot(player, activity, respectExempt = true)
+            teleportToSpot(player, activity, respectExempt = true, allowRepeat = false)
         }
         return true
     }
@@ -149,14 +149,19 @@ class ActivityService(
     fun warpManual(player: Player): Boolean {
         val activity = activities[player.uniqueId] ?: return false
         activity.markManual()
-        return teleportToSpot(player, activity, respectExempt = false)
+        return teleportToSpot(player, activity, respectExempt = false, allowRepeat = true)
     }
 
-    private fun teleportToSpot(player: Player, activity: PlayerActivity, respectExempt: Boolean): Boolean {
+    private fun teleportToSpot(
+        player: Player,
+        activity: PlayerActivity,
+        respectExempt: Boolean,
+        allowRepeat: Boolean,
+    ): Boolean {
         val config = SleepyConfig.instance
         if (!config.teleport.enabled || !regions.hasAvailableRegion()) return false
         if (respectExempt && isExempt(player, config)) return false
-        if (regions.contains(player.location)) return true
+        if (!allowRepeat && regions.contains(player.location)) return true
 
         regions.teleport(player, activity)
         return true

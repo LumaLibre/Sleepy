@@ -4,6 +4,7 @@ import dev.geco.gsit.api.GSitAPI
 import dev.geco.gsit.model.PoseType
 import dev.geco.gsit.model.StopReason
 import dev.lumas.core.util.PluginContextLogger
+import dev.lumas.sleepy.config.SleepyConfig
 import dev.lumas.sleepy.model.SpawnPose
 import org.bukkit.Bukkit
 import org.bukkit.block.Block
@@ -29,7 +30,7 @@ object GSitIntegration {
         val rotation = player.location.yaw
         return try {
             when (pose) {
-                SpawnPose.SIT -> GSitAPI.createSeat(block, player, true, rotation, centerOnBlock) != null
+                SpawnPose.SIT -> GSitAPI.createSeat(block, player, !SleepyConfig.instance.teleport.restrictPoseRotation, rotation, centerOnBlock) != null
                 else -> {
                     val type = pose.toPoseType() ?: return false
                     GSitAPI.createPose(block, player, type, rotation, centerOnBlock) != null
@@ -53,6 +54,37 @@ object GSitIntegration {
             LOGGER.warning("Unable to get ${player.name} out of their AFK pose: ${exception.message}", exception)
         } catch (error: LinkageError) {
             LOGGER.warning("Installed GSit version does not support AFK spawn poses", error)
+        }
+    }
+
+    fun isPosing(player: Player): Boolean {
+        if (!isAvailable) return false
+        return try {
+            GSitAPI.isPlayerPosing(player)
+        } catch (exception: RuntimeException) {
+            LOGGER.warning("Unable to read ${player.name}'s GSit pose: ${exception.message}", exception)
+            false
+        } catch (error: LinkageError) {
+            LOGGER.warning("Installed GSit version does not support AFK spawn poses", error)
+            false
+        }
+    }
+
+    fun releaseForTeleport(player: Player): Boolean {
+        if (!isAvailable) return false
+        return try {
+            val pose = GSitAPI.getPoseByPlayer(player)
+            val seat = GSitAPI.getSeatByEntity(player)
+            var unseated = false
+            if (pose != null) unseated = GSitAPI.removePose(pose, StopReason.TELEPORT, false) || unseated
+            if (seat != null) unseated = GSitAPI.removeSeat(seat, StopReason.TELEPORT, false) || unseated
+            unseated
+        } catch (exception: RuntimeException) {
+            LOGGER.warning("Unable to unseat ${player.name} before teleporting: ${exception.message}", exception)
+            false
+        } catch (error: LinkageError) {
+            LOGGER.warning("Installed GSit version does not support AFK spawn poses", error)
+            false
         }
     }
 

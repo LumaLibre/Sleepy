@@ -92,7 +92,10 @@ class SleepyConfig {
         var regions: MutableList<AfkRegion> = mutableListOf(AfkRegion())
 
         @field:Setting("center-poses-on-block")
-        var centerPosesOnBlock: Boolean = true
+        var centerPosesOnBlock: Boolean = false
+
+        @field:Setting("restrict-pose-rotation")
+        var restrictPoseRotation: Boolean = true
 
         @field:Setting("unseat-on-return")
         var unseatOnReturn: Boolean = false

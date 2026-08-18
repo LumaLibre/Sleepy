@@ -78,6 +78,9 @@ data class AfkRegion(
 
     val spawnCount: Int get() = resolved().configuredSpawns.size
 
+    fun poseAt(index: Int): SpawnPose =
+        resolved().configuredSpawns.getOrNull(index)?.pose ?: SpawnPose.STAND
+
     fun spawn(index: Int): Spawn {
         val resolved = resolved()
         resolved.configuredSpawns.getOrNull(index)?.let { configured ->

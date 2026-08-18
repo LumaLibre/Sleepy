@@ -31,14 +31,16 @@ class RegionService {
         }
         if (available.isEmpty() || activity.teleportPending) return
 
-        val slot = selectSlot(player.uniqueId, available) ?: return
+        val avoidFullPoses = GSitIntegration.isPosing(player)
+        val slot = selectSlot(player.uniqueId, available, avoidFullPoses) ?: return
         val spawn = slot.region.spawn(slot.index)
         activity.teleportPending = true
         occupied[player.uniqueId] = slot.key
 
+        val unseated = GSitIntegration.releaseForTeleport(player)
         val vehicle = player.vehicle
-        if (vehicle != null) {
-            if (!player.leaveVehicle()) {
+        if (unseated || vehicle != null) {
+            if (vehicle != null && !player.leaveVehicle()) {
                 vehicle.removePassenger(player)
             }
             player.scheduler.execute(
@@ -67,7 +69,11 @@ class RegionService {
         occupied.remove(uuid)
     }
 
-    private fun selectSlot(uuid: UUID, available: List<Pair<AfkRegion, World>>): SpawnSlot? {
+    private fun selectSlot(
+        uuid: UUID,
+        available: List<Pair<AfkRegion, World>>,
+        avoidFullPoses: Boolean,
+    ): SpawnSlot? {
         val candidates = available.flatMap { (region, world) ->
             val count = region.spawnCount
             if (count == 0) {
@@ -78,8 +84,17 @@ class RegionService {
         }
         if (candidates.isEmpty()) return null
 
+        val poseable = if (!avoidFullPoses) {
+            candidates
+        } else {
+            candidates.filter { !it.region.poseAt(it.index).isFullPose }.ifEmpty { candidates }
+        }
+
+        val current = occupied[uuid]
+        val choices = poseable.filter { it.key != current }.ifEmpty { poseable }
+
         val occupants = occupied.filterKeys { it != uuid }.values.groupingBy { it }.eachCount()
-        val fewest = candidates.groupBy { occupants[it.key] ?: 0 }.minBy { it.key }.value
+        val fewest = choices.groupBy { occupants[it.key] ?: 0 }.minBy { it.key }.value
         return fewest[ThreadLocalRandom.current().nextInt(fewest.size)]
     }
 

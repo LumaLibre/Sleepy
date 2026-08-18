@@ -11,6 +11,8 @@ enum class SpawnPose {
 
     val requiresGSit: Boolean get() = this != STAND
 
+    val isFullPose: Boolean get() = requiresGSit && this != SIT
+
     companion object {
         val names: String get() = entries.joinToString(", ") { it.name.lowercase() }
 
