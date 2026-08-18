@@ -15,6 +15,7 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://repo.jsinco.dev/releases")
     maven("https://repo.extendedclip.com/releases/")
+    maven("https://jitpack.io")
 }
 
 dependencies {
@@ -23,6 +24,7 @@ dependencies {
     compileOnly("dev.lumas.core:LumaCore:dd53fbc")
     compileOnly("dev.lumas.shops:Shops:05cf1ff")
     compileOnly("me.clip:placeholderapi:2.12.2")
+    compileOnly("com.github.Gecolay.GSit:core:3.5.1")
 
     implementation("org.xerial:sqlite-jdbc:3.53.1.0")
 
@@ -64,7 +66,7 @@ bukkit {
     description = "Movement-aware AFK and playtime tracking for Luma."
     foliaSupported = true
     depend = listOf("LumaCore")
-    softDepend = listOf("PlaceholderAPI", "Shops")
+    softDepend = listOf("PlaceholderAPI", "Shops", "GSit")
     permissions {
         register("sleepy.command.playtime") {
             description = "View playtime."

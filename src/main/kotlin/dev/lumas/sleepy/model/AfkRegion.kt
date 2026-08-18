@@ -28,7 +28,8 @@ data class AfkRegion(
 
     @field:Setting("spawn-locations")
     @field:Comment(
-        "Locations using world,x,y,z or world,x,y,z,yaw,pitch. If empty, a random position is used.",
+        "Locations using world,x,y,z or world,x,y,z,yaw,pitch. If empty, a random position is used.\n" +
+            "Append a pose to seat the player there with GSit: stand, sit, lay, lay_back, bellyflop, spin.",
     )
     var spawnLocations: MutableList<String> = mutableListOf(
         "minecraft:overworld,0,65,0",
@@ -63,7 +64,8 @@ data class AfkRegion(
         require(worldsMatch(minimum.world, maximum.world)) {
             "AFK region '$name' corners must use the same world"
         }
-        resolved.configuredSpawns.forEachIndexed { index, position ->
+        resolved.configuredSpawns.forEachIndexed { index, spawn ->
+            val position = spawn.position
             require(
                 worldsMatch(position.world, minimum.world) &&
                     resolved.contains(position.x, position.y, position.z),
@@ -74,16 +76,15 @@ data class AfkRegion(
         resolvedRegion = resolved
     }
 
-    fun selectSpawn(): Spawn {
+    val spawnCount: Int get() = resolved().configuredSpawns.size
+
+    fun spawn(index: Int): Spawn {
         val resolved = resolved()
-        val random = ThreadLocalRandom.current()
-        if (resolved.configuredSpawns.isNotEmpty()) {
-            return Spawn(
-                resolved.configuredSpawns[random.nextInt(resolved.configuredSpawns.size)],
-                configured = true,
-            )
+        resolved.configuredSpawns.getOrNull(index)?.let { configured ->
+            return Spawn(configured.position, configured.pose, configured = true)
         }
 
+        val random = ThreadLocalRandom.current()
         return Spawn(
             WorldPosition(
                 resolved.minimum.world,
@@ -91,6 +92,7 @@ data class AfkRegion(
                 resolved.minY,
                 random.coordinate(resolved.minZ, resolved.maxZ),
             ),
+            SpawnPose.STAND,
             configured = false,
         )
     }
@@ -120,6 +122,7 @@ data class AfkRegion(
 
     class Spawn internal constructor(
         val position: WorldPosition,
+        val pose: SpawnPose,
         val configured: Boolean,
     )
 
@@ -133,7 +136,7 @@ data class AfkRegion(
         maximum = WorldPosition.parse(max),
         configuredSpawns = spawnLocations.mapIndexed { index, configured ->
             try {
-                WorldPosition.parse(configured)
+                SpawnPoint.parse(configured)
             } catch (exception: IllegalArgumentException) {
                 throw IllegalArgumentException(
                     "AFK region '$name' spawn-locations[$index]: ${exception.message}",
@@ -159,7 +162,7 @@ data class AfkRegion(
     private data class ResolvedAfkRegion(
         val minimum: WorldPosition,
         val maximum: WorldPosition,
-        val configuredSpawns: List<WorldPosition>,
+        val configuredSpawns: List<SpawnPoint>,
     ) {
         val minX: Double = min(minimum.x, maximum.x)
         val minY: Double = min(minimum.y, maximum.y)

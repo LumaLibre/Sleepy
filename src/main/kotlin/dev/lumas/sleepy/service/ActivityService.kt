@@ -79,6 +79,7 @@ class ActivityService(
     }
 
     fun quit(player: Player) {
+        regions.release(player.uniqueId)
         activities.remove(player.uniqueId)?.snapshot()?.let(::saveAllAsync)
     }
 
@@ -126,11 +127,16 @@ class ActivityService(
 
     private fun sendReturnMessage(player: Player, returned: Boolean) {
         if (returned) {
+            regions.release(player)
             Messages.send(player, "sleepy.message.afk.return")
         }
     }
 
-    fun toggleManual(player: Player): Boolean = activities[player.uniqueId]?.toggleManual() ?: false
+    fun toggleManual(player: Player): Boolean {
+        val enabled = activities[player.uniqueId]?.toggleManual() ?: false
+        if (!enabled) regions.release(player)
+        return enabled
+    }
 
     fun addPoints(player: Player, amount: Long): Long? {
         val activity = activities[player.uniqueId] ?: return null
@@ -201,7 +207,7 @@ class ActivityService(
             result.becameAfk && result.cause == AfkCause.INACTIVITY ->
                 Messages.send(player, "sleepy.message.afk.auto")
 
-            result.returned -> Messages.send(player, "sleepy.message.afk.return")
+            result.returned -> sendReturnMessage(player, true)
         }
 
         if (result.cause != AfkCause.NONE && !exemptFromActions) {

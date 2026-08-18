@@ -88,6 +88,12 @@ class SleepyConfig {
         )
         var regions: MutableList<AfkRegion> = mutableListOf(AfkRegion())
 
+        @field:Setting("center-poses-on-block")
+        var centerPosesOnBlock: Boolean = true
+
+        @field:Setting("unseat-on-return")
+        var unseatOnReturn: Boolean = false
+
         @field:Setting("pre-teleport-actions")
         @field:Comment(
             "Commands, MiniMessage messages, and titles to execute once at configurable countdown points.",
