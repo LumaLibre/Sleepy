@@ -58,6 +58,41 @@ class RegionService {
         executeTeleport(player, activity, slot.region, slot.world, spawn)
     }
 
+    fun restorePose(player: Player, activity: PlayerActivity) {
+        val config = SleepyConfig.instance.teleport
+        if (!config.enabled || !config.restorePosesOnJoin) return
+        if (!player.isOnline || activity.teleportPending) return
+        if (!GSitIntegration.isAvailable || player.vehicle != null || GSitIntegration.isPosing(player)) return
+
+        val slot = nearestPosedSlot(player.location, config.restorePoseRadius) ?: return
+        val spawn = slot.region.spawn(slot.index)
+        val destination = spawn.position.toLocation(slot.world)
+        activity.teleportPending = true
+        occupied[player.uniqueId] = slot.key
+
+        player.teleportAsync(destination).whenComplete { success, error ->
+            if (success == true) {
+                activity.resetCamera(destination.yaw, destination.pitch)
+            } else {
+                occupied.remove(player.uniqueId)
+            }
+            activity.teleportPending = false
+            when {
+                error != null -> LOGGER.warning(
+                    "Unable to restore ${player.name}'s AFK pose: ${error.message}",
+                    error,
+                )
+
+                success == true -> player.scheduler.execute(
+                    Sleepy.instance,
+                    { applyPose(player, activity, spawn) },
+                    null,
+                    1L,
+                )
+            }
+        }
+    }
+
     fun release(player: Player) {
         if (occupied.remove(player.uniqueId) == null) return
         if (!SleepyConfig.instance.teleport.unseatOnReturn) return
@@ -96,6 +131,27 @@ class RegionService {
         val occupants = occupied.filterKeys { it != uuid }.values.groupingBy { it }.eachCount()
         val fewest = choices.groupBy { occupants[it.key] ?: 0 }.minBy { it.key }.value
         return fewest[ThreadLocalRandom.current().nextInt(fewest.size)]
+    }
+
+    private fun nearestPosedSlot(location: Location, radius: Double): SpawnSlot? {
+        if (radius <= 0.0) return null
+        val world = location.world ?: return null
+        val limit = radius * radius
+        var nearest: SpawnSlot? = null
+        var nearestDistance = Double.MAX_VALUE
+
+        SleepyConfig.instance.teleport.regions.forEach { region ->
+            if (resolveWorld(region.world)?.uid != world.uid) return@forEach
+            for (index in 0 until region.spawnCount) {
+                if (!region.poseAt(index).requiresGSit) continue
+                val distance = region.spawn(index).position.distanceSquared(location)
+                if (distance <= limit && distance < nearestDistance) {
+                    nearestDistance = distance
+                    nearest = SpawnSlot(region, world, index)
+                }
+            }
+        }
+        return nearest
     }
 
     private fun executeTeleport(player: Player, activity: PlayerActivity, selected: AfkRegion, world: World, spawn: AfkRegion.Spawn) {

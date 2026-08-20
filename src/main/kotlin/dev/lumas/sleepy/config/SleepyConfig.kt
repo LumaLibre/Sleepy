@@ -100,6 +100,12 @@ class SleepyConfig {
         @field:Setting("unseat-on-return")
         var unseatOnReturn: Boolean = false
 
+        @field:Setting("restore-poses-on-join")
+        var restorePosesOnJoin: Boolean = true
+
+        @field:Setting("restore-pose-radius")
+        var restorePoseRadius: Double = 1.5
+
         @field:Setting("pre-teleport-actions")
         @field:Comment(
             "Commands, MiniMessage messages, and titles to execute once at configurable countdown points.",

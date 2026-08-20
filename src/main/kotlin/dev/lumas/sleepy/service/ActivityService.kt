@@ -72,6 +72,12 @@ class ActivityService(
                         20L,
                         20L,
                     )
+                    player.scheduler.runDelayed(
+                        Sleepy.instance,
+                        { regions.restorePose(player, activity) },
+                        null,
+                        RESTORE_POSE_DELAY_TICKS,
+                    )
                 },
                 null,
             )
@@ -360,6 +366,8 @@ class ActivityService(
 
     companion object {
         private val LOGGER = PluginContextLogger.getPluginLogger()
+
+        private const val RESTORE_POSE_DELAY_TICKS = 20L // render delay
         const val EXEMPT_PERMISSION = "sleepy.exempt"
     }
 }

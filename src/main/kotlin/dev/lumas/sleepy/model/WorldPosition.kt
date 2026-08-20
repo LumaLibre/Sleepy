@@ -15,6 +15,13 @@ data class WorldPosition(
         this.world.equals(world.name, ignoreCase = true) ||
             this.world.equals(world.key.asString(), ignoreCase = true)
 
+    fun distanceSquared(location: Location): Double {
+        val deltaX = x - location.x
+        val deltaY = y - location.y
+        val deltaZ = z - location.z
+        return deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ
+    }
+
     fun toLocation(world: World): Location {
         require(isIn(world)) {
             "World '${world.key.asString()}' does not match configured world '${this.world}'"
