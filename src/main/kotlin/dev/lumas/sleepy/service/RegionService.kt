@@ -155,41 +155,67 @@ class RegionService {
     }
 
     private fun executeTeleport(player: Player, activity: PlayerActivity, selected: AfkRegion, world: World, spawn: AfkRegion.Spawn) {
+        if (spawn.configured) {
+            finishTeleport(player, activity, selected, spawn, selected.resolveSpawn(world, spawn))
+            return
+        }
+
+        // The safe-spawn scan reads blocks, so it has to run on the region that owns them, while the teleport itself must not
         val schedulingLocation = spawn.position.toLocation(world)
         Bukkit.getRegionScheduler().execute(Sleepy.instance, schedulingLocation) {
             val destination = selected.resolveSpawn(world, spawn)
-            if (destination == null) {
-                activity.teleportPending = false
+            player.scheduler.execute(
+                Sleepy.instance,
+                { finishTeleport(player, activity, selected, spawn, destination) },
+                { abortTeleport(player, activity) },
+                1L,
+            )
+        }
+    }
+
+    // Must run on the region that owns the player
+    private fun finishTeleport(
+        player: Player,
+        activity: PlayerActivity,
+        selected: AfkRegion,
+        spawn: AfkRegion.Spawn,
+        destination: Location?,
+    ) {
+        if (destination == null) {
+            abortTeleport(player, activity)
+            LOGGER.warning("AFK region '${selected.name}' has no safe random spawn location")
+            return
+        }
+
+        player.teleportAsync(destination).whenComplete { success, error ->
+            if (success == true) {
+                activity.resetCamera(destination.yaw, destination.pitch)
+            } else {
                 occupied.remove(player.uniqueId)
-                LOGGER.warning("AFK region '${selected.name}' has no safe random spawn location")
-                return@execute
             }
+            activity.teleportPending = false
+            when {
+                error != null -> LOGGER.warning(
+                    "Unable to teleport ${player.name}: ${error.message}",
+                    error,
+                )
 
-            player.teleportAsync(destination).whenComplete { success, error ->
-                if (success == true) {
-                    activity.resetCamera(destination.yaw, destination.pitch)
-                } else {
-                    occupied.remove(player.uniqueId)
-                }
-                activity.teleportPending = false
-                when {
-                    error != null -> LOGGER.warning(
-                        "Unable to teleport ${player.name}: ${error.message}",
-                        error,
-                    )
-
-                    success == true -> player.scheduler.execute(
-                        Sleepy.instance,
-                        {
-                            applyPose(player, activity, spawn)
-                            Messages.send(player, "sleepy.message.teleported")
-                        },
-                        null,
-                        1L,
-                    )
-                }
+                success == true -> player.scheduler.execute(
+                    Sleepy.instance,
+                    {
+                        applyPose(player, activity, spawn)
+                        Messages.send(player, "sleepy.message.teleported")
+                    },
+                    null,
+                    1L,
+                )
             }
         }
+    }
+
+    private fun abortTeleport(player: Player, activity: PlayerActivity) {
+        activity.teleportPending = false
+        occupied.remove(player.uniqueId)
     }
 
     private fun applyPose(player: Player, activity: PlayerActivity, spawn: AfkRegion.Spawn) {
