@@ -8,7 +8,6 @@ import dev.lumas.sleepy.model.Dreams
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.translation.GlobalTranslator
 import org.bukkit.entity.Player
-import java.util.Locale
 
 data class DreamCurrency(val amount: Long) : Currency<Long> {
     override fun type(): CurrencyType<*> = ShopsIntegration.currencyType
@@ -29,7 +28,7 @@ data class DreamCurrency(val amount: Long) : Currency<Long> {
     override fun readablePrice(multiplier: Int): Component =
         GlobalTranslator.render(
             Dreams.display(requiredAmount(multiplier) ?: Long.MAX_VALUE),
-            TranslatorService.instance.defaultLocale
+            TranslatorService.locale,
         )
 
     private fun requiredAmount(multiplier: Int): Long? {

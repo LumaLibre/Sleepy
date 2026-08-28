@@ -27,7 +27,11 @@ class TranslatorService : MiniMessageTranslator(), Service {
 
     override fun register() {
         LOGGER.info("Registering translation service")
-        reload()
+        try {
+            reload()
+        } catch (exception: RuntimeException) {
+            LOGGER.error("Unable to load Sleepy locale files; translation keys will be shown untranslated", exception)
+        }
         GlobalTranslator.translator().addSource(this)
         LOGGER.info("Translation service registered")
     }
@@ -49,9 +53,12 @@ class TranslatorService : MiniMessageTranslator(), Service {
                 paths.filter { it.fileName.toString().endsWith(LANG_SUFFIX) }
                     .forEach { loadOne(it, loaded) }
             }
-            defaultLocale = Locale.forLanguageTag(SleepyConfig.instance.locale)
-            check(loaded.containsKey(defaultLocale)) {
-                "No locale file for ${defaultLocale.toLanguageTag()}"
+            val configured = Locale.forLanguageTag(SleepyConfig.instance.locale)
+            defaultLocale = if (loaded.containsKey(configured)) configured else {
+                LOGGER.warning(
+                    "No locale file for ${configured.toLanguageTag()}; using ${FALLBACK_LOCALE.toLanguageTag()} instead",
+                )
+                FALLBACK_LOCALE
             }
             translations = loaded.toMap()
             LOGGER.info("Loaded ${loaded.size} locale file(s); default locale is ${defaultLocale.toLanguageTag()}")
@@ -147,11 +154,19 @@ class TranslatorService : MiniMessageTranslator(), Service {
         private val LOGGER = PluginContextLogger.getPluginLogger()
         private const val LANG_SUFFIX = ".lang.properties"
         private const val DEFAULT_FILE = "en-US.lang.properties"
+        private val FALLBACK_LOCALE: Locale = Locale.forLanguageTag(DEFAULT_FILE.removeSuffix(LANG_SUFFIX))
         private const val LEGACY_PLURAL = "oneira" + "s"
         private const val CURRENT_PLURAL = "oneira"
         private val TRANSLATOR_KEY = Key.key("sleepy", "translator")
 
+        val instanceOrNull: TranslatorService?
+            get() = Services.getTracked(TranslatorService::class.java) as? TranslatorService
+
         val instance: TranslatorService
-            get() = Services.getTracked(TranslatorService::class.java) as TranslatorService
+            get() = checkNotNull(instanceOrNull) { "Sleepy's translation service is not registered" }
+
+        /** The default locale, or [FALLBACK_LOCALE] when the service failed to register. */
+        val locale: Locale
+            get() = instanceOrNull?.defaultLocale ?: FALLBACK_LOCALE
     }
 }
