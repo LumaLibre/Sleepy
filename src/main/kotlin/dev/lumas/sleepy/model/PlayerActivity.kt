@@ -40,7 +40,8 @@ class PlayerActivity(stored: PlaytimeEntry) {
     private var manual: Boolean = false
 
     @Volatile
-    private var wasInRegion: Boolean = false
+    var isInAfkRegion: Boolean = false
+        private set
 
     private var movementInputActive: Boolean = false
     private var movementAnchor: MovementAnchor? = null
@@ -55,8 +56,8 @@ class PlayerActivity(stored: PlaytimeEntry) {
     fun tick(inRegion: Boolean, exempt: Boolean, markAfterSeconds: Long): TickResult {
         val previous = cause
         val previousAfkSeconds = currentAfkSeconds
-        val previouslyInRegion = wasInRegion
-        wasInRegion = inRegion
+        val previouslyInRegion = isInAfkRegion
+        isInAfkRegion = inRegion
         playtimeSeconds++
 
         when {

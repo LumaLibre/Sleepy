@@ -2,6 +2,7 @@ package dev.lumas.sleepy
 
 import dev.lumas.core.manager.Modules
 import dev.lumas.sleepy.config.SleepyConfig
+import dev.lumas.sleepy.integration.luckperms.LuckPermsIntegration
 import dev.lumas.sleepy.integration.shops.ShopsIntegration
 import dev.lumas.sleepy.service.ActivityService
 import dev.lumas.sleepy.storage.JetsAntiAfkMigrator
@@ -54,6 +55,15 @@ class Sleepy : JavaPlugin() {
         activity = step("Creating activity service") {
             ActivityService(repository)
         }
+        step("Registering LuckPerms AFK context") {
+            when {
+                !LuckPermsIntegration.isAvailable -> logger.info("LuckPerms is not installed; the AFK permission context is inactive")
+                LuckPermsIntegration.register() -> logger.info(
+                    "Registered LuckPerms contexts sleepy:afk, sleepy:afk-cause and sleepy:afk-region",
+                )
+                else -> logger.warning("Unable to register LuckPerms AFK permission context")
+            }
+        }
         step("Registering LumaCore modules") {
             modules.register()
         }
@@ -69,6 +79,7 @@ class Sleepy : JavaPlugin() {
     }
 
     override fun onDisable() {
+        LuckPermsIntegration.unregister()
         if (shopsCurrencyRegistered) ShopsIntegration.unregister()
         if (::modules.isInitialized) modules.unregister()
         if (hasActivity()) activity.shutdown()

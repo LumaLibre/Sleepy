@@ -3,6 +3,7 @@ package dev.lumas.sleepy.service
 import dev.lumas.core.util.PluginContextLogger
 import dev.lumas.sleepy.Sleepy
 import dev.lumas.sleepy.config.SleepyConfig
+import dev.lumas.sleepy.integration.luckperms.LuckPermsIntegration
 import dev.lumas.sleepy.model.AfkCause
 import dev.lumas.sleepy.model.CommandAction
 import dev.lumas.sleepy.model.Dreams
@@ -78,6 +79,7 @@ class ActivityService(
                         null,
                         RESTORE_POSE_DELAY_TICKS,
                     )
+                    LuckPermsIntegration.signalUpdate(player)
                 },
                 null,
             )
@@ -134,6 +136,7 @@ class ActivityService(
     private fun sendReturnMessage(player: Player, returned: Boolean) {
         if (returned) {
             regions.release(player)
+            LuckPermsIntegration.signalUpdate(player)
             Messages.send(player, "sleepy.message.afk.return")
         }
     }
@@ -141,6 +144,7 @@ class ActivityService(
     fun toggleManual(player: Player): Boolean {
         val activity = activities[player.uniqueId] ?: return false
         val enabled = activity.toggleManual()
+        LuckPermsIntegration.signalUpdate(player)
         if (!enabled) {
             regions.release(player)
             return false
@@ -155,6 +159,7 @@ class ActivityService(
     fun warpManual(player: Player): Boolean {
         val activity = activities[player.uniqueId] ?: return false
         activity.markManual()
+        LuckPermsIntegration.signalUpdate(player)
         return teleportToSpot(player, activity, respectExempt = false, allowRepeat = true)
     }
 
@@ -232,6 +237,9 @@ class ActivityService(
         val exemptFromActions = isExempt(player, config)
         val exemptFromStatus = exemptFromActions && !keepsAfkStatus(player, config)
         val result = activity.tick(inRegion, exemptFromStatus, config.detection.markAfterSeconds)
+        if (result.previousCause != result.cause || result.wasInRegion != result.inRegion) {
+            LuckPermsIntegration.signalUpdate(player)
+        }
 
         runPointRewards(player, activity, activity.playtimeSeconds, config.pointRewards)
 
