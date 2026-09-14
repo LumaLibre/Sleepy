@@ -9,6 +9,7 @@ import dev.lumas.sleepy.model.CommandAction
 import dev.lumas.sleepy.model.Dreams
 import dev.lumas.sleepy.model.PlayerActivity
 import dev.lumas.sleepy.model.PlaytimeEntry
+import dev.lumas.sleepy.model.PointBooster
 import dev.lumas.sleepy.model.PointReward
 import dev.lumas.sleepy.storage.PlaytimeRepository
 import dev.lumas.sleepy.util.Messages
@@ -277,24 +278,26 @@ class ActivityService(
     }
 
     private fun runPointRewards(player: Player, activity: PlayerActivity, playtimeSeconds: Long, rewards: List<PointReward>) {
-        var awarded = false
+        val due = rewards.filter { it.isDue(playtimeSeconds) }
+        if (due.isEmpty()) return
+
+        val boosterLevel = PointBooster.level(
+            player.effectivePermissions.filter { it.value }.map { it.permission },
+        )
         // TODO: configurability for isAfk
-        rewards.filter { it.isDue(playtimeSeconds) }
-            .forEach { reward ->
-                val balance = activity.addPoints(reward.amount)
-                awarded = true
-                if (reward.sendMessage) {
-                    Messages.send(
-                        player,
-                        "sleepy.message.oneira.earned",
-                        Dreams.display(reward.amount),
-                        Dreams.display(balance),
-                    )
-                }
+        due.forEach { reward ->
+            val earned = PointBooster.roll(reward.amount, boosterLevel)
+            val balance = activity.addPoints(earned)
+            if (reward.sendMessage) {
+                Messages.send(
+                    player,
+                    "sleepy.message.oneira.earned",
+                    Dreams.display(earned),
+                    Dreams.display(balance),
+                )
             }
-        if (awarded) {
-            savePointsAsync(activity)
         }
+        savePointsAsync(activity)
     }
 
     private fun isExempt(player: Player, config: SleepyConfig): Boolean =
