@@ -13,6 +13,7 @@ enum class SqlStatement(private val resourceName: String) {
     FIND_BY_UUID("find-by-uuid.sql"),
     TOP_PLAYTIME("top-playtime.sql"),
     TOP_AFK_TIME("top-afk-time.sql"),
+    TOP_POINTS("top-points.sql"),
     MIGRATION_EXISTS("migration-exists.sql"),
     RECORD_MIGRATION("record-migration.sql"),
     JETS_SELECT_PLAYTIME("jets-select-playtime.sql"),

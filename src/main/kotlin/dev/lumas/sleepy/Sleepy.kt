@@ -21,17 +21,6 @@ class Sleepy : JavaPlugin() {
     override fun onLoad() {
         instance = this
         modules = Modules(this)
-        if (server.pluginManager.getPlugin("Shops") != null) {
-            try {
-                ShopsIntegration.register()
-                shopsCurrencyRegistered = true
-                logger.info("Registered oneira as the Shops currency sleepy:oneira")
-            } catch (exception: RuntimeException) {
-                logger.log(Level.SEVERE, "Unable to register the oneira Shops currency", exception)
-            } catch (error: LinkageError) {
-                logger.log(Level.SEVERE, "Installed Shops version does not support the oneira currency integration", error)
-            }
-        }
     }
 
     override fun onEnable() {
@@ -46,10 +35,6 @@ class Sleepy : JavaPlugin() {
         }
         step("Checking legacy playtime migration") {
             migrateLegacyData(config)
-        }
-
-        if (!shopsCurrencyRegistered) {
-            logger.info("oneira Shops currency integration is inactive")
         }
 
         activity = step("Creating activity service") {
@@ -67,6 +52,7 @@ class Sleepy : JavaPlugin() {
         step("Registering LumaCore modules") {
             modules.register()
         }
+        registerShopsIntegration()
         val onlinePlayers = Bukkit.getOnlinePlayers().toList()
         step("Starting activity tracking for ${onlinePlayers.size} online player(s)") {
             onlinePlayers.forEach(activity::join)
@@ -76,6 +62,23 @@ class Sleepy : JavaPlugin() {
         }
 
         logger.info("Finished in ${elapsedMillis(startupStarted)} ms")
+    }
+
+    private fun registerShopsIntegration() {
+        if (!server.pluginManager.isPluginEnabled("Shops")) {
+            logger.info("Shops is not installed; the oneira currency integration is inactive")
+            return
+        }
+
+        try {
+            ShopsIntegration.register()
+            shopsCurrencyRegistered = true
+            logger.info("Registered oneira as the Shops currency sleepy:oneira")
+        } catch (exception: RuntimeException) {
+            logger.log(Level.SEVERE, "Unable to register the oneira Shops currency", exception)
+        } catch (error: LinkageError) {
+            logger.log(Level.SEVERE, "Installed Shops version does not support the oneira currency integration", error)
+        }
     }
 
     override fun onDisable() {

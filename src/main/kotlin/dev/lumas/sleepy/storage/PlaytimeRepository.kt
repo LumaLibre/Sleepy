@@ -12,6 +12,7 @@ interface PlaytimeRepository : AutoCloseable {
     fun find(nameOrUuid: String): PlaytimeEntry?
     fun top(limit: Int): List<PlaytimeEntry>
     fun topAfk(limit: Int): List<PlaytimeEntry>
+    fun topPoints(limit: Int): List<PlaytimeEntry>
     fun migrationCompleted(sourceKey: String): Boolean
     fun markMigrationCompleted(sourceKey: String, importedRows: Int)
     override fun close()

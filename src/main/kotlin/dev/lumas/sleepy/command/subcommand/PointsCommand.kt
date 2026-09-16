@@ -1,6 +1,7 @@
 package dev.lumas.sleepy.command.subcommand
 
 import com.mojang.brigadier.Command
+import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.LongArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
@@ -16,6 +17,7 @@ import dev.lumas.sleepy.command.CommandManager
 import dev.lumas.sleepy.model.Dreams
 import dev.lumas.sleepy.model.PlaytimeEntry
 import dev.lumas.sleepy.util.Messages
+import dev.lumas.sleepy.util.PlayerNames
 import io.papermc.paper.command.brigadier.CommandSourceStack
 import io.papermc.paper.command.brigadier.Commands
 import net.kyori.adventure.text.Component
@@ -28,9 +30,9 @@ import java.util.concurrent.CompletableFuture
 @CommandMeta(
     name = "points",
     aliases = ["oneira"],
-    description = "View or give oneira.",
+    description = "View, give, or take oneira.",
     permission = "sleepy.command.points",
-    usage = "/<command> oneira [player] | /<command> points give <player> <amount>",
+    usage = "/<command> oneira [player] | /<command> oneira top [count] | /<command> points <give|take> <player> <amount>",
     parent = CommandManager::class,
 )
 class PointsCommand : BrigadierSubCommand {
@@ -65,6 +67,44 @@ class PointsCommand : BrigadierSubCommand {
                                     Command.SINGLE_SUCCESS
                                 },
                         ),
+                ),
+        )
+
+        builder.then(
+            Commands.literal("take")
+                .requires { it.sender.hasPermission("sleepy.command.points.take") }
+                .then(
+                    Commands.argument("player", StringArgumentType.word())
+                        .suggests(::suggestPlayers)
+                        .then(
+                            Commands.argument("amount", LongArgumentType.longArg(1))
+                                .executes { context ->
+                                    take(
+                                        context.source.sender,
+                                        StringArgumentType.getString(context, "player"),
+                                        LongArgumentType.getLong(context, "amount"),
+                                    )
+                                    Command.SINGLE_SUCCESS
+                                },
+                        ),
+                ),
+        )
+
+        builder.then(
+            Commands.literal("top")
+                .executes { context ->
+                    showTop(context.source.sender, DEFAULT_TOP_SIZE)
+                    Command.SINGLE_SUCCESS
+                }
+                .then(
+                    Commands.argument("count", IntegerArgumentType.integer(1, MAX_TOP_SIZE))
+                        .executes { context ->
+                            showTop(
+                                context.source.sender,
+                                IntegerArgumentType.getInteger(context, "count"),
+                            )
+                            Command.SINGLE_SUCCESS
+                        },
                 ),
         )
 
@@ -139,6 +179,70 @@ class PointsCommand : BrigadierSubCommand {
         }
     }
 
+    private fun take(sender: CommandSender, target: String, amount: Long) {
+        Bukkit.getPlayerExact(target)?.let { online ->
+            val activity = Sleepy.activity.activity(online)
+            if (activity == null) {
+                Messages.send(sender, "sleepy.message.oneira.not_found", Component.text(target))
+                return
+            }
+            if (!Sleepy.activity.withdrawPoints(online, amount)) {
+                sendInsufficientBalance(sender, online.name, amount, activity.points)
+                return
+            }
+            sendTaken(sender, online.name, amount, activity.points)
+            if (sender !is Player || sender.uniqueId != online.uniqueId) {
+                Messages.send(
+                    online,
+                    "sleepy.message.oneira.removed",
+                    Dreams.display(amount),
+                    Dreams.display(activity.points),
+                )
+            }
+            return
+        }
+
+        findStored(target) { stored ->
+            if (stored == null) {
+                reply(sender) {
+                    Messages.send(sender, "sleepy.message.oneira.not_found", Component.text(target))
+                }
+                return@findStored
+            }
+            if (stored.points < amount) {
+                reply(sender) { sendInsufficientBalance(sender, stored.name, amount, stored.points) }
+                return@findStored
+            }
+            val balance = stored.points - amount
+            Sleepy.repository.savePoints(stored.copy(points = balance))
+            reply(sender) { sendTaken(sender, stored.name, amount, balance) }
+        }
+    }
+
+    private fun showTop(sender: CommandSender, count: Int) {
+        Bukkit.getAsyncScheduler().runNow(Sleepy.instance) {
+            val entries = Sleepy.repository.topPoints(MAX_TOP_SIZE)
+                .mapNotNull { PlayerNames.resolveAndRepair(it, Sleepy.repository) }
+                .take(count)
+            reply(sender) {
+                if (entries.isEmpty()) {
+                    Messages.send(sender, "sleepy.message.oneira.top.empty")
+                    return@reply
+                }
+
+                entries.forEachIndexed { index, entry ->
+                    Messages.sendUnprefixed(
+                        sender,
+                        "sleepy.message.oneira.top.entry",
+                        Component.text((index + 1).toString()),
+                        Component.text(entry.name),
+                        Dreams.display(entry.points),
+                    )
+                }
+            }
+        }
+    }
+
     private fun findStored(target: String, action: (PlaytimeEntry?) -> Unit) {
         Bukkit.getAsyncScheduler().runNow(Sleepy.instance) {
             val result = Sleepy.repository.find(target)
@@ -165,6 +269,26 @@ class PointsCommand : BrigadierSubCommand {
         )
     }
 
+    private fun sendTaken(sender: CommandSender, target: String, amount: Long, balance: Long) {
+        Messages.send(
+            sender,
+            "sleepy.message.oneira.taken",
+            Dreams.display(amount),
+            Component.text(target),
+            Dreams.display(balance),
+        )
+    }
+
+    private fun sendInsufficientBalance(sender: CommandSender, target: String, amount: Long, balance: Long) {
+        Messages.send(
+            sender,
+            "sleepy.message.oneira.insufficient",
+            Component.text(target),
+            Dreams.display(amount),
+            Dreams.display(balance),
+        )
+    }
+
     private fun reply(sender: CommandSender, action: () -> Unit) {
         if (sender is Player) {
             sender.scheduler.execute(Sleepy.instance, action, null, 1L)
@@ -180,12 +304,18 @@ class PointsCommand : BrigadierSubCommand {
         val remaining = builder.remaining.lowercase()
         val sender = context.source.sender
         val mayTargetOthers = sender.hasPermission("sleepy.command.points.others") ||
-            sender.hasPermission("sleepy.command.points.give")
+            sender.hasPermission("sleepy.command.points.give") ||
+            sender.hasPermission("sleepy.command.points.take")
         Bukkit.getOnlinePlayers().asSequence()
             .map(Player::getName)
             .filter { mayTargetOthers || sender.name.equals(it, ignoreCase = true) }
             .filter { it.lowercase().startsWith(remaining) }
             .forEach(builder::suggest)
         return builder.buildFuture()
+    }
+
+    private companion object {
+        const val DEFAULT_TOP_SIZE = 10
+        const val MAX_TOP_SIZE = 100
     }
 }

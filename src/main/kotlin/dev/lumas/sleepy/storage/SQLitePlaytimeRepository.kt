@@ -141,6 +141,12 @@ class SQLitePlaytimeRepository(private val file: Path) : PlaytimeRepository {
         throw databaseFailure("load AFK-time leaderboard", exception)
     }
 
+    override fun topPoints(limit: Int): List<PlaytimeEntry> = try {
+        loadTop(SqlStatement.TOP_POINTS, limit)
+    } catch (exception: SQLException) {
+        throw databaseFailure("load oneira leaderboard", exception)
+    }
+
     private fun loadTop(sql: SqlStatement, limit: Int): List<PlaytimeEntry> =
         connect().use { connection ->
             connection.prepareStatement(sql.text).use { statement ->

@@ -106,6 +106,10 @@ bukkit {
             description = "Give oneira."
             default = BukkitPluginDescription.Permission.Default.OP
         }
+        register("sleepy.command.points.take") {
+            description = "Take oneira."
+            default = BukkitPluginDescription.Permission.Default.OP
+        }
         register("sleepy.command.reload") {
             description = "Reload Sleepy."
             default = BukkitPluginDescription.Permission.Default.OP
