@@ -19,7 +19,9 @@ import io.papermc.paper.threadedregions.scheduler.ScheduledTask
 import org.bukkit.Bukkit
 import org.bukkit.Input
 import org.bukkit.Location
+import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
+import org.bukkit.persistence.PersistentDataType
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -59,7 +61,9 @@ class ActivityService(
                     val activity = PlayerActivity(loaded)
                     val location = player.location
                     activity.resetCamera(location.yaw, location.pitch)
+                    activity.fakeAfk = player.persistentDataContainer.has(FAKE_AFK_KEY)
                     activities[uuid] = activity
+                    if (activity.fakeAfk) Messages.send(player, "sleepy.message.fakeafk.reminder")
                     player.scheduler.runAtFixedRate(
                         Sleepy.instance,
                         { task -> sampleCamera(player, activity, task) },
@@ -155,6 +159,19 @@ class ActivityService(
             teleportToSpot(player, activity, respectExempt = true, allowRepeat = false)
         }
         return true
+    }
+
+    fun toggleFakeAfk(player: Player): Boolean {
+        val container = player.persistentDataContainer
+        val enabled = !container.has(FAKE_AFK_KEY)
+        if (enabled) {
+            container.set(FAKE_AFK_KEY, PersistentDataType.BOOLEAN, true)
+        } else {
+            container.remove(FAKE_AFK_KEY)
+        }
+        activities[player.uniqueId]?.fakeAfk = enabled
+        LuckPermsIntegration.signalUpdate(player)
+        return enabled
     }
 
     fun warpManual(player: Player): Boolean {
@@ -380,5 +397,6 @@ class ActivityService(
 
         private const val RESTORE_POSE_DELAY_TICKS = 20L // render delay
         const val EXEMPT_PERMISSION = "sleepy.exempt"
+        private val FAKE_AFK_KEY = NamespacedKey("sleepy", "fakeafk")
     }
 }

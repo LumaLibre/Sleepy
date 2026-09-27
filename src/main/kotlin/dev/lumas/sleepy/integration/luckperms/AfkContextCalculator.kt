@@ -12,8 +12,8 @@ class AfkContextCalculator : ContextCalculator<Player> {
 
     override fun calculate(target: Player, consumer: ContextConsumer) {
         val activity = Sleepy.activity.activity(target)
-        consumer.accept(AFK_KEY, (activity?.isAfk == true).toString())
-        consumer.accept(CAUSE_KEY, (activity?.cause ?: AfkCause.NONE).contextValue)
+        consumer.accept(AFK_KEY, (activity?.appearsAfk == true).toString())
+        consumer.accept(CAUSE_KEY, (activity?.displayCause ?: AfkCause.NONE).contextValue)
         consumer.accept(REGION_KEY, (activity?.isInAfkRegion == true).toString())
     }
 

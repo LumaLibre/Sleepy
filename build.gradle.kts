@@ -118,6 +118,10 @@ bukkit {
             description = "Copy your current coordinates."
             default = BukkitPluginDescription.Permission.Default.OP
         }
+        register("sleepy.command.fakeafk") {
+            description = "Toggle appearing AFK while still active."
+            default = BukkitPluginDescription.Permission.Default.OP
+        }
         register("sleepy.exempt") {
             description = "Exempts a player from AFK teleports and actions, and from AFK tracking unless exempt-keeps-afk-status is enabled."
             default = BukkitPluginDescription.Permission.Default.OP
