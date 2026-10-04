@@ -61,7 +61,11 @@ class ActivityService(
                     val activity = PlayerActivity(loaded)
                     val location = player.location
                     activity.resetCamera(location.yaw, location.pitch)
-                    activity.fakeAfk = player.persistentDataContainer.has(FAKE_AFK_KEY)
+                    val container = player.persistentDataContainer
+                    if (container.has(FAKE_AFK_KEY) && !player.hasPermission(FAKE_AFK_PERMISSION)) {
+                        container.remove(FAKE_AFK_KEY)
+                    }
+                    activity.fakeAfk = container.has(FAKE_AFK_KEY)
                     activities[uuid] = activity
                     if (activity.fakeAfk) Messages.send(player, "sleepy.message.fakeafk.reminder")
                     player.scheduler.runAtFixedRate(
@@ -397,6 +401,7 @@ class ActivityService(
 
         private const val RESTORE_POSE_DELAY_TICKS = 20L // render delay
         const val EXEMPT_PERMISSION = "sleepy.exempt"
+        private const val FAKE_AFK_PERMISSION = "sleepy.command.fakeafk"
         private val FAKE_AFK_KEY = NamespacedKey("sleepy", "fakeafk")
     }
 }
