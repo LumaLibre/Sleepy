@@ -33,7 +33,7 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.12.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.spongepowered:configurate-yaml:4.2.0")
-    testRuntimeOnly("io.papermc.paper:paper-api:26.1.2.build.+")
+    testImplementation("io.papermc.paper:paper-api:26.1.2.build.+")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

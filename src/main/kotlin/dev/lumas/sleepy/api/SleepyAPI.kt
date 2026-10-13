@@ -20,7 +20,7 @@ object SleepyAPI {
     @JvmStatic
     fun hasBeenAfkForTicks(player: Player, ticks: Long): Boolean = hasBeenAfkForTicks(player.uniqueId, ticks)
 
-    /** UUID overload of [hasBeenAfkFor]; only the current online session is queried. */
+    /** UUID overload of [hasBeenAfkForTicks] */
     @JvmStatic
     fun hasBeenAfkForTicks(uuid: UUID, ticks: Long): Boolean {
         require(ticks >= 0) { "AFK duration must not be negative" }
@@ -29,9 +29,15 @@ object SleepyAPI {
         return activity.currentAfkSeconds >= seconds
     }
 
+    /**
+     * Returns whether the tracked streak is at least [seconds] long, independently of the AFK marker.
+     * Returns false if Sleepy is disabled or the player is not loaded/tracked.
+     * Zero matches any tracked player.
+     */
     @JvmStatic
     fun hasBeenAfkFor(player: Player, seconds: Long): Boolean = hasBeenAfkFor(player.uniqueId, seconds)
 
+    /** UUID overload of [hasBeenAfkFor] */
     @JvmStatic
     fun hasBeenAfkFor(uuid: UUID, seconds: Long): Boolean {
         require(seconds >= 0) { "AFK duration must not be negative" }
