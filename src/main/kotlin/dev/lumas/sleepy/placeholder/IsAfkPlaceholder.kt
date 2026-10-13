@@ -16,7 +16,7 @@ import org.bukkit.OfflinePlayer
 )
 class IsAfkPlaceholder : PlaceholderModule {
     override fun onRequest(plugin: Sleepy, player: OfflinePlayer?, args: List<String>): String {
-        val configured = if (activity(player)?.isAfk == true) {
+        val configured = if (activity(player)?.appearsAfk == true) {
             SleepyConfig.instance.afkPlaceholder
         } else {
             SleepyConfig.instance.notAfkPlaceholder

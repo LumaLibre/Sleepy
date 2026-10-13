@@ -49,8 +49,17 @@ class PlayerActivity(stored: PlaytimeEntry) {
 
     private val executedPreTeleportActions = mutableSetOf<Long>()
 
+    @Volatile
+    var fakeAfk: Boolean = false
+
     val isAfk: Boolean
         get() = cause != AfkCause.NONE
+
+    val displayCause: AfkCause
+        get() = if (fakeAfk && cause == AfkCause.NONE) AfkCause.MANUAL else cause
+
+    val appearsAfk: Boolean
+        get() = displayCause != AfkCause.NONE
 
     @Synchronized
     fun tick(inRegion: Boolean, exempt: Boolean, markAfterSeconds: Long): TickResult {
