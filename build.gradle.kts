@@ -2,7 +2,7 @@ import net.minecrell.pluginyml.bukkit.BukkitPluginDescription
 
 plugins {
     kotlin("jvm") version "2.4.0"
-    //id("com.gradleup.shadow") version "8.3.5"
+    id("maven-publish")
     id("de.eldoria.plugin-yml.bukkit") version "0.9.0"
     id("xyz.jpenilla.run-paper") version "3.0.1"
 }
@@ -41,6 +41,10 @@ kotlin {
     jvmToolchain(25)
 }
 
+java {
+    withSourcesJar()
+}
+
 tasks {
     runServer {
         minecraftVersion("26.1.2")
@@ -48,15 +52,30 @@ tasks {
     test {
         useJUnitPlatform()
     }
-//    build {
-//        dependsOn(shadowJar)
-//    }
-//    shadowJar {
-//        archiveClassifier.set("")
-//    }
-//    jar {
-//        enabled = false
-//    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "jsinco-repo"
+            url = uri("https://repo.jsinco.dev/releases")
+            credentials(PasswordCredentials::class) {
+                username = System.getenv("REPO_USERNAME")
+                password = System.getenv("REPO_PASSWORD")
+            }
+            authentication {
+                create<BasicAuthentication>("basic")
+            }
+        }
+    }
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+            groupId = project.group.toString()
+            artifactId = project.name
+            version = project.version.toString()
+        }
+    }
 }
 
 bukkit {
