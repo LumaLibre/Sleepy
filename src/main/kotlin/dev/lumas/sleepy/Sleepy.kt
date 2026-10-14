@@ -41,13 +41,14 @@ class Sleepy : JavaPlugin() {
         activity = step("Creating activity service") {
             ActivityService(repository)
         }
-        SleepyAPI.bind(activity::activity)
+        SleepyAPI.bind(activity)
         step("Registering LuckPerms AFK context") {
             when {
                 !LuckPermsIntegration.isAvailable -> logger.info("LuckPerms is not installed; the AFK permission context is inactive")
                 LuckPermsIntegration.register() -> logger.info(
                     "Registered LuckPerms contexts sleepy:afk, sleepy:afk-cause and sleepy:afk-region",
                 )
+
                 else -> logger.warning("Unable to register LuckPerms AFK permission context")
             }
         }
@@ -99,7 +100,8 @@ class Sleepy : JavaPlugin() {
             return
         }
         val configured = Path.of(config.migration.jetsSqlitePath)
-        val source = if (configured.isAbsolute) configured else Path.of(System.getProperty("user.dir")).resolve(configured)
+        val source =
+            if (configured.isAbsolute) configured else Path.of(System.getProperty("user.dir")).resolve(configured)
         val normalized = source.toAbsolutePath().normalize()
         if (!Files.isRegularFile(normalized)) {
             logger.info("No JetsAntiAFKPro SQLite database found at $normalized; skipping migration")

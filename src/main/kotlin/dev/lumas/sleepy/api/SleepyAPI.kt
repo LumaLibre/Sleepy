@@ -1,15 +1,26 @@
 package dev.lumas.sleepy.api
 
+import dev.lumas.sleepy.api.SleepyAPI.getAfkTicks
+import dev.lumas.sleepy.api.SleepyAPI.hasBeenAfkFor
+import dev.lumas.sleepy.api.SleepyAPI.hasBeenAfkForTicks
+import dev.lumas.sleepy.api.SleepyAPI.isAfk
 import dev.lumas.sleepy.model.PlayerActivity
+import dev.lumas.sleepy.service.ActivityService
 import org.bukkit.entity.Player
-import java.util.UUID
+import java.util.*
 
 object SleepyAPI {
-    @Volatile
-    private var activityLookup: ((UUID) -> PlayerActivity?)? = null
 
-    internal fun bind(lookup: ((UUID) -> PlayerActivity?)?) {
-        activityLookup = lookup
+    @Volatile
+    private var activityService: ActivityService? = null
+
+    internal fun bind(activityService: ActivityService?) {
+        this.activityService = activityService
+    }
+
+    @JvmStatic
+    fun wakeup(player: Player) {
+        activityService?.recordActivity(player)
     }
 
     /**
@@ -24,7 +35,7 @@ object SleepyAPI {
     @JvmStatic
     fun hasBeenAfkForTicks(uuid: UUID, ticks: Long): Boolean {
         require(ticks >= 0) { "AFK duration must not be negative" }
-        val activity = activityLookup?.invoke(uuid) ?: return false
+        val activity = activityService?.activity(uuid) ?: return false
         val seconds = ticks / 20 + if (ticks % 20 == 0L) 0 else 1
         return activity.currentAfkSeconds >= seconds
     }
@@ -41,7 +52,7 @@ object SleepyAPI {
     @JvmStatic
     fun hasBeenAfkFor(uuid: UUID, seconds: Long): Boolean {
         require(seconds >= 0) { "AFK duration must not be negative" }
-        val activity = activityLookup?.invoke(uuid) ?: return false
+        val activity = activityService?.activity(uuid) ?: return false
         return activity.currentAfkSeconds >= seconds
     }
 
@@ -55,7 +66,7 @@ object SleepyAPI {
     /** UUID overload of [getAfkTicks]; only the current online session is queried. */
     @JvmStatic
     fun getAfkTicks(uuid: UUID): Long {
-        val seconds = activityLookup?.invoke(uuid)?.currentAfkSeconds ?: return 0
+        val seconds = activityService?.activity(uuid)?.currentAfkSeconds ?: return 0
         return if (seconds > Long.MAX_VALUE / 20) Long.MAX_VALUE else seconds * 20
     }
 
@@ -65,10 +76,10 @@ object SleepyAPI {
 
     /** UUID overload of [isAfk]; unlike duration queries, this respects the configured AFK marker. */
     @JvmStatic
-    fun isAfk(uuid: UUID): Boolean = activityLookup?.invoke(uuid)?.isAfk ?: false
+    fun isAfk(uuid: UUID): Boolean = activityService?.activity(uuid)?.isAfk ?: false
 
     @JvmStatic
     fun getPlayerActivity(player: Player): PlayerActivity? {
-        return activityLookup?.invoke(player.uniqueId)
+        return activityService?.activity(player.uniqueId)
     }
 }

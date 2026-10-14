@@ -2,18 +2,13 @@ package dev.lumas.sleepy.service
 
 import dev.lumas.core.util.PluginContextLogger
 import dev.lumas.sleepy.Sleepy
+import dev.lumas.sleepy.api.event.SleepySleepEvent
 import dev.lumas.sleepy.config.SleepyConfig
 import dev.lumas.sleepy.integration.luckperms.LuckPermsIntegration
-import dev.lumas.sleepy.model.AfkCause
-import dev.lumas.sleepy.model.CommandAction
-import dev.lumas.sleepy.model.Dreams
-import dev.lumas.sleepy.model.PlayerActivity
-import dev.lumas.sleepy.model.PlaytimeEntry
-import dev.lumas.sleepy.model.PointBooster
-import dev.lumas.sleepy.model.PointReward
+import dev.lumas.sleepy.model.*
 import dev.lumas.sleepy.storage.PlaytimeRepository
-import dev.lumas.sleepy.util.Messages
 import dev.lumas.sleepy.util.ActionText
+import dev.lumas.sleepy.util.Messages
 import dev.lumas.sleepy.util.PlayerNames
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask
 import org.bukkit.Bukkit
@@ -22,7 +17,7 @@ import org.bukkit.Location
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
 import org.bukkit.persistence.PersistentDataType
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class ActivityService(
@@ -268,16 +263,13 @@ class ActivityService(
         if (result.enteredRegion) {
             Messages.send(player, "sleepy.message.afk.region.enter")
         }
-        when {
-            result.becameAfk && result.cause == AfkCause.INACTIVITY ->
-                Messages.send(player, "sleepy.message.afk.auto")
-
-            result.returned -> sendReturnMessage(player, true)
-        }
 
         if (result.cause != AfkCause.NONE && !exemptFromActions) {
             runActions(player, result.afkSeconds, config.teleport.afterSeconds, config.commandActions)
             val canTeleport = config.teleport.enabled && !inRegion && regions.hasAvailableRegion()
+            if (!SleepySleepEvent(player, teleport = canTeleport).callEvent()) {
+                return
+            }
             if (canTeleport) {
                 preTeleportActions.executeDue(
                     player,
@@ -291,6 +283,12 @@ class ActivityService(
                 }
             }
         }
+        when {
+            result.becameAfk && result.cause == AfkCause.INACTIVITY ->
+                Messages.send(player, "sleepy.message.afk.auto")
+
+            result.returned -> sendReturnMessage(player, true)
+        }
 
         if (activity.playtimeSeconds % config.storage.saveEverySeconds == 0L) {
             saveAsync(activity.snapshot())
@@ -298,7 +296,12 @@ class ActivityService(
         }
     }
 
-    private fun runPointRewards(player: Player, activity: PlayerActivity, playtimeSeconds: Long, rewards: List<PointReward>) {
+    private fun runPointRewards(
+        player: Player,
+        activity: PlayerActivity,
+        playtimeSeconds: Long,
+        rewards: List<PointReward>
+    ) {
         val due = rewards.filter { it.isDue(playtimeSeconds) }
         if (due.isEmpty()) return
 

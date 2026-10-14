@@ -28,7 +28,7 @@ dependencies {
     compileOnly("com.github.Gecolay.GSit:core:3.5.1")
     compileOnly("net.luckperms:api:5.5")
 
-    implementation("org.xerial:sqlite-jdbc:3.53.1.0")
+    compileOnly("org.xerial:sqlite-jdbc:3.53.1.0")
 
     testImplementation(platform("org.junit:junit-bom:5.12.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -142,7 +142,8 @@ bukkit {
             default = BukkitPluginDescription.Permission.Default.OP
         }
         register("sleepy.exempt") {
-            description = "Exempts a player from AFK teleports and actions, and from AFK tracking unless exempt-keeps-afk-status is enabled."
+            description =
+                "Exempts a player from AFK teleports and actions, and from AFK tracking unless exempt-keeps-afk-status is enabled."
             default = BukkitPluginDescription.Permission.Default.OP
         }
     }
