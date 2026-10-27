@@ -1,6 +1,6 @@
 package dev.lumas.sleepy.model
 
-import java.util.UUID
+import java.util.*
 import kotlin.math.IEEErem
 import kotlin.math.abs
 
@@ -67,6 +67,9 @@ class PlayerActivity(stored: PlaytimeEntry) {
         val previousAfkSeconds = currentAfkSeconds
         val previouslyInRegion = isInAfkRegion
         isInAfkRegion = inRegion
+        if (!isInAfkRegion && previouslyInRegion) {
+            recordActivity()
+        }
         playtimeSeconds++
 
         when {
@@ -158,7 +161,7 @@ class PlayerActivity(stored: PlaytimeEntry) {
         }
 
         val moved = angularDistance(previous.yaw, current.yaw) >= toleranceDegrees ||
-            abs(previous.pitch - current.pitch) >= toleranceDegrees
+                abs(previous.pitch - current.pitch) >= toleranceDegrees
         if (!moved) return false
 
         cameraAnchor = current
